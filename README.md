@@ -25,8 +25,9 @@ pip install -e .
 ## Quickstart (5 minutes)
 1. Clone repo and enter it.
 2. Install package: `pip install -e .`
-3. Run help: `python -m job_discovery_engine.cli --help`
-4. Run a dry pass:
+3. Copy env template: `cp .env.example .env`
+4. Run help: `python -m job_discovery_engine.cli --help`
+5. Run a dry pass:
 
 ```bash
 python -m job_discovery_engine.cli \
@@ -68,6 +69,16 @@ python -m job_discovery_engine.cli --help
 - To override selectively, set `DISCOVERY_CONFIG_PATH` to a JSON file; values are deep-merged over defaults.
 - If API sync is enabled, ensure API base URL and write key are valid.
 - LLM reranker requires provider credentials unless `--llm-dry-run` is used.
+
+### Environment variables
+| Variable | Default | Purpose |
+|---|---|---|
+| `JOB_SEARCH_API_BASE_URL` | `http://127.0.0.1:8000` | API base URL for shortlist upserts |
+| `JOB_SEARCH_WRITE_API_KEY` | _(empty)_ | Optional write key for API upserts |
+| `DISCOVERY_CONFIG_PATH` | package default JSON | Optional config override path |
+| `OPENAI_API_KEY` or `LLM_API_KEY` | _(empty)_ | Optional LLM API key |
+| `LLM_API_BASE_URL` | `https://api.openai.com/v1` | LLM provider base URL |
+| `LLM_MODEL` | `gpt-4o-mini` | Default LLM model |
 
 ## Integration note for job-application-insights
 - App backend imports this package directly and calls `run_discovery_pipeline`.

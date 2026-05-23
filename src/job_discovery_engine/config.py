@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 
 
+# Canonical package defaults. These values are intentionally versioned in-repo
+# so CLI/API behavior stays deterministic unless an explicit override is provided.
 DEFAULT_DISCOVERY_CONFIG = {
     "sources": {
         "wwr_feeds": [
@@ -176,9 +178,11 @@ def _as_profile_terms(value: object, fallback: dict[str, list[str]]) -> dict[str
 
 
 def _load_discovery_config() -> dict[str, object]:
+    # Default to package-local JSON so discovery works without any env setup.
     default_path = Path(__file__).resolve().parent / "discovery_config.json"
     config_path = Path(os.environ.get("DISCOVERY_CONFIG_PATH", str(default_path))).expanduser()
 
+    # Resolve relative override paths from the caller's working directory.
     if not config_path.is_absolute():
         config_path = (Path.cwd() / config_path).resolve()
 
