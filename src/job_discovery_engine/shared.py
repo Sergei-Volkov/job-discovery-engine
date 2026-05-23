@@ -11,7 +11,6 @@ It has been split into focused sub-modules:
 This file re-exports every public name so that existing callers
 (cli.py, sources.py, outputs.py) continue to work without modification.
 """
-from __future__ import annotations
 
 # ---- dataclasses + exception classifier ------------------------------------
 try:

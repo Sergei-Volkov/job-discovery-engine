@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 try:
     from .pipeline import DiscoveryRunOptions, DiscoveryRunResult, DiscoveryRunWarnings, run_discovery_pipeline
