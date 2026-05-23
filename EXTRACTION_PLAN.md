@@ -1,34 +1,29 @@
 # Discovery Extraction Plan
 
-This file is the short version: enough detail to start the split, not a full implementation spec.
+Extraction status: completed.
+
+This file is now a short maintenance checklist for post-extraction evolution.
 
 ## Current state
-- Discovery already has a public API in `discovery/api.py`.
-- Orchestration is in `discovery/pipeline.py`.
+- Public API is in `src/job_discovery_engine/api.py`.
+- Orchestration is in `src/job_discovery_engine/pipeline.py`.
 - Runtime state is explicit via `DiscoveryContext`.
-- The app can run discovery in `subprocess` or `module` mode.
+- `job-application-insights` consumes this repo as a pinned dependency.
 
-## Recommended split
-- Keep `job-application-insights` as the app/product repo.
-- Create a separate Python package repo for discovery, for example `job-discovery-engine`.
-- The app should depend on a pinned release of that package.
-- The app should only rely on the public API: `DiscoveryContext`, `DiscoveryRunOptions`, `DiscoveryRunResult`, `DiscoveryRunWarnings`, `run_discovery_pipeline`.
+## Ongoing contract
+- Keep app-facing imports limited to: `DiscoveryContext`, `DiscoveryRunOptions`, `DiscoveryRunResult`, `DiscoveryRunWarnings`, `run_discovery_pipeline`.
+- Patch releases: behavior fixes only.
+- Minor releases: additive fields/options with safe defaults.
+- Major releases: allowed breaking changes with migration notes.
 
-## First release contract (`0.1.0`)
-- Stable inputs: required CV path, current profile values, bounded numeric controls, current source keys.
-- Stable outputs: strict shortlist, broad results, file paths, counts, warnings.
-- Compatibility rule: patch fixes only, minor adds fields/options, major breaks the contract.
-- Avoid importing private discovery internals from the app.
-
-## Minimal extraction order
-1. Freeze the public discovery contract and test it.
-2. Move discovery code into the new package repo and add package metadata.
-3. Move discovery tests with it.
-4. Publish `0.1.0` and pin the app to it.
-5. Keep `subprocess` as the fallback runner while validating the package.
-6. Flip to `module` mode after the package proves stable.
+## Release checklist
+1. Update tests for any contract additions.
+2. Run `pytest -q`.
+3. Update `CHANGELOG.md`.
+4. Tag release (`vX.Y.Z`) and push tag.
+5. Bump pinned version in app backend requirements.
 
 ## What not to do
-- Don’t split before the public API is stable.
-- Don’t keep the app importing discovery internals.
-- Don’t let hidden globals become part of the contract.
+- Don’t expose private internals as implicit API.
+- Don’t change dataclass field names/order silently.
+- Don’t ship behavior changes without changelog notes.
