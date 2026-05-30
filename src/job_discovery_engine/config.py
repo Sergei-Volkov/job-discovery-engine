@@ -25,6 +25,15 @@ DEFAULT_DISCOVERY_CONFIG = {
         "search_terms": {
             "de": ["data engineer", "analytics engineer", "data platform", "airflow", "etl"],
             "swe": ["software engineer", "backend engineer", "platform engineer", "infrastructure engineer"],
+            "sre": [
+                "site reliability engineer",
+                "sre",
+                "platform engineer",
+                "devops engineer",
+                "infrastructure engineer",
+                "cloud engineer",
+                "reliability engineer",
+            ],
             "other": ["data engineer", "software engineer", "platform engineer", "etl", "backend engineer"],
         },
         "default_search_terms": ["data engineer", "analytics engineer", "data platform", "airflow", "etl"],
@@ -68,6 +77,21 @@ DEFAULT_DISCOVERY_CONFIG = {
             "pipeline": 2,
             "warehouse": 1,
             "snowflake": 2,
+            "kubernetes": 3,
+            "k8s": 3,
+            "helm": 2,
+            "prometheus": 2,
+            "grafana": 2,
+            "ansible": 2,
+            "linux": 1,
+            "ci/cd": 2,
+            "cicd": 2,
+            "observability": 2,
+            "alerting": 1,
+            "nginx": 1,
+            "istio": 2,
+            "vault": 2,
+            "pagerduty": 2,
         },
         "display_names": {
             "python": "Python",
@@ -90,6 +114,21 @@ DEFAULT_DISCOVERY_CONFIG = {
             "pipeline": "pipelines",
             "warehouse": "data warehousing",
             "snowflake": "Snowflake",
+            "kubernetes": "Kubernetes",
+            "k8s": "Kubernetes",
+            "helm": "Helm",
+            "prometheus": "Prometheus",
+            "grafana": "Grafana",
+            "ansible": "Ansible",
+            "linux": "Linux",
+            "ci/cd": "CI/CD",
+            "cicd": "CI/CD",
+            "observability": "observability",
+            "alerting": "alerting",
+            "nginx": "nginx",
+            "istio": "Istio",
+            "vault": "Vault",
+            "pagerduty": "PagerDuty",
         },
         "skill_patterns": {
             "python": ["\\bpython\\b"],
@@ -106,6 +145,21 @@ DEFAULT_DISCOVERY_CONFIG = {
             "data quality": ["data quality", "validation"],
             "pipeline": ["pipelines?"],
             "warehouse": ["warehouse", "warehouse-ready"],
+            "kubernetes": ["\\bkubernetes\\b", "\\bk8s\\b"],
+            "k8s": ["\\bk8s\\b"],
+            "helm": ["\\bhelm\\b"],
+            "prometheus": ["\\bprometheus\\b"],
+            "grafana": ["\\bgrafana\\b"],
+            "ansible": ["\\bansible\\b"],
+            "linux": ["\\blinux\\b"],
+            "ci/cd": ["ci/cd", "cicd", "continuous integration", "continuous delivery", "continuous deployment"],
+            "cicd": ["cicd", "ci/cd"],
+            "observability": ["observability", "\\bobserve\\b"],
+            "alerting": ["alerting", "on-call", "oncall"],
+            "nginx": ["\\bnginx\\b"],
+            "istio": ["\\bistio\\b"],
+            "vault": ["\\bvault\\b"],
+            "pagerduty": ["pagerduty", "pager duty"],
         },
         "seniority_levels": {
             "junior": 1,
@@ -116,6 +170,10 @@ DEFAULT_DISCOVERY_CONFIG = {
         },
         "score_strong_min": 12,
         "score_medium_min": 7,
+        # User-defined skills not covered by skill_patterns regex.
+        # These are matched as plain substrings against the CV text.
+        # Example: ["trino", "clickhouse", "flink"]
+        "extra_skills": [],
     },
 }
 
@@ -263,6 +321,11 @@ try:
     SCORE_MEDIUM_MIN = int(_scoring_cfg.get("score_medium_min", DEFAULT_DISCOVERY_CONFIG["scoring"]["score_medium_min"]))
 except (TypeError, ValueError):
     SCORE_MEDIUM_MIN = int(DEFAULT_DISCOVERY_CONFIG["scoring"]["score_medium_min"])
+
+EXTRA_SKILLS = _as_string_list(
+    _scoring_cfg.get("extra_skills"),
+    [],
+)
 
 DEFAULT_API_BASE_URL = os.environ.get("JOB_SEARCH_API_BASE_URL", "http://127.0.0.1:8000")
 DEFAULT_API_WRITE_KEY = os.environ.get("JOB_SEARCH_WRITE_API_KEY", "")

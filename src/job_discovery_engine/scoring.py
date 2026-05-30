@@ -37,6 +37,11 @@ def extract_owned_skills_from_cv(cv_path: Path) -> set[str]:
     if "pipeline" in owned:
         owned.add("etl")
 
+    # Extra skills from discovery_config override: matched as plain substrings.
+    for skill in config.EXTRA_SKILLS:
+        if skill.strip().lower() in text:
+            owned.add(skill.strip().lower())
+
     return owned
 
 
@@ -47,12 +52,29 @@ def infer_search_terms_for_profile(owned_skills: set[str], profile: str) -> list
             terms.append("airflow")
         if ("etl" in owned_skills or "elt" in owned_skills) and "etl" not in terms:
             terms.append("etl")
+    if profile == "sre":
+        if "kubernetes" in owned_skills and "kubernetes" not in terms:
+            terms.append("kubernetes")
+        if "terraform" in owned_skills and "terraform" not in terms:
+            terms.append("terraform")
+        if "ansible" in owned_skills and "ansible" not in terms:
+            terms.append("ansible")
     return terms
 
 
 def profile_title_signals(profile: str) -> list[str]:
     if profile == "swe":
         return ["software engineer", "backend engineer", "platform engineer", "infrastructure", "devops"]
+    if profile == "sre":
+        return [
+            "site reliability",
+            "sre",
+            "platform engineer",
+            "devops engineer",
+            "infrastructure engineer",
+            "cloud engineer",
+            "reliability engineer",
+        ]
     if profile == "other":
         return [
             "data engineer",
@@ -76,6 +98,18 @@ def profile_title_signals(profile: str) -> list[str]:
 def profile_reject_patterns(profile: str) -> list[str]:
     if profile == "swe":
         return ["data scientist", "data annotator", "marketing analytics", "manager", "director", "volunteer"]
+    if profile == "sre":
+        return [
+            "data scientist",
+            "data annotator",
+            "marketing analytics",
+            "manager",
+            "director",
+            "volunteer",
+            "talent community",
+            "frontend",
+            "front end",
+        ]
     if profile == "other":
         return ["manager", "director", "volunteer", "talent community"]
     return config.REJECT_PATTERNS
@@ -130,6 +164,19 @@ def score_match(title: str, details: str, context: DiscoveryContext | None = Non
         score += 6
     if runtime.profile == "swe" and ("software engineer" in title_lower or "backend engineer" in title_lower):
         score += 5
+    if runtime.profile == "sre" and (
+        "site reliability" in title_lower
+        or "sre" in title_lower
+        or "reliability engineer" in title_lower
+    ):
+        score += 6
+    if runtime.profile == "sre" and (
+        "platform engineer" in title_lower
+        or "devops engineer" in title_lower
+        or "infrastructure engineer" in title_lower
+        or "cloud engineer" in title_lower
+    ):
+        score += 4
     if runtime.profile == "other" and ("software engineer" in title_lower or "backend engineer" in title_lower):
         score += 3
     if "analytics engineer" in title_lower:
