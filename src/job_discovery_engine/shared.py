@@ -59,6 +59,7 @@ try:
         SENIORITY_LEVELS,
         SKILL_PATTERNS,
         SOURCE_OPTIONS,
+        USER_CONFIG_PATH,
         WORKING_NOMADS_API,
         WWR_FEEDS,
     )
@@ -82,6 +83,7 @@ except ImportError:  # pragma: no cover - script-mode fallback
         SENIORITY_LEVELS,
         SKILL_PATTERNS,
         SOURCE_OPTIONS,
+        USER_CONFIG_PATH,
         WORKING_NOMADS_API,
         WWR_FEEDS,
     )

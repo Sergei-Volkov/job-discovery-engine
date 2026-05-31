@@ -235,8 +235,11 @@ def _as_profile_terms(value: object, fallback: dict[str, list[str]]) -> dict[str
     return out or fallback
 
 
+USER_CONFIG_PATH = Path("~/.config/job-discovery/config.json").expanduser()
+
+
 def _load_discovery_config() -> dict[str, object]:
-    # Default to package-local JSON so discovery works without any env setup.
+    # Layer 1: package-local defaults (discovery_config.json bundled in-repo).
     default_path = Path(__file__).resolve().parent / "discovery_config.json"
     config_path = Path(os.environ.get("DISCOVERY_CONFIG_PATH", str(default_path))).expanduser()
 
@@ -244,18 +247,30 @@ def _load_discovery_config() -> dict[str, object]:
     if not config_path.is_absolute():
         config_path = (Path.cwd() / config_path).resolve()
 
+    # Layer 2: user-level config (~/.config/job-discovery/config.json).
+    # Applied on top of defaults before the project-level override so project
+    # settings can still override user preferences for specific runs.
+    base = DEFAULT_DISCOVERY_CONFIG
+    if USER_CONFIG_PATH.exists():
+        try:
+            user_payload = json.loads(USER_CONFIG_PATH.read_text(encoding="utf-8"))
+            if isinstance(user_payload, dict):
+                base = _deep_merge(DEFAULT_DISCOVERY_CONFIG, user_payload)
+        except (OSError, json.JSONDecodeError):
+            pass  # user config malformed — fall back to defaults silently
+
     if not config_path.exists():
-        return DEFAULT_DISCOVERY_CONFIG
+        return base
 
     try:
         payload = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return DEFAULT_DISCOVERY_CONFIG
+        return base
 
     if not isinstance(payload, dict):
-        return DEFAULT_DISCOVERY_CONFIG
+        return base
 
-    return _deep_merge(DEFAULT_DISCOVERY_CONFIG, payload)
+    return _deep_merge(base, payload)
 
 
 _loaded_config = _load_discovery_config()

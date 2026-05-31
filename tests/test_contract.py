@@ -11,13 +11,14 @@ if str(_SRC_ROOT) not in sys.path:
 
 import job_discovery_engine as discovery_package  # noqa: E402
 from job_discovery_engine import api as discovery_api  # noqa: E402
+from job_discovery_engine import config as discovery_config  # noqa: E402
+from job_discovery_engine.config import USER_CONFIG_PATH, _deep_merge, _load_discovery_config  # noqa: E402
 from job_discovery_engine.models import CollectionReport, DiscoveryContext, JobMatch, SourceRunReport  # noqa: E402
 from job_discovery_engine.pipeline import DiscoveryRunOptions, run_discovery_pipeline  # noqa: E402
 from job_discovery_engine.rerankers import LLMRerankReport  # noqa: E402
 from job_discovery_engine.scoring import cv_word_bag, is_relevant, score_match  # noqa: E402
 from job_discovery_engine.sources import collect_remotive  # noqa: E402
 from job_discovery_engine.text_utils import read_cv_text  # noqa: E402
-from job_discovery_engine import config as discovery_config  # noqa: E402
 
 
 def test_public_api_surface_is_frozen() -> None:
@@ -416,3 +417,76 @@ def test_run_discovery_pipeline_cv_words_in_context(monkeypatch, tmp_path: Path)
     assert "python" in ctx.cv_words
     assert "airflow" in ctx.cv_words
     assert "fastapi" in ctx.cv_words
+
+
+# ---------------------------------------------------------------------------
+# Session 11: user-level config (~/.config/job-discovery/config.json)
+# ---------------------------------------------------------------------------
+
+def test_user_config_path_constant_is_correct() -> None:
+    assert USER_CONFIG_PATH == Path("~/.config/job-discovery/config.json").expanduser()
+    assert isinstance(USER_CONFIG_PATH, Path)
+
+
+def test_user_config_merged_before_project_override(tmp_path: Path, monkeypatch) -> None:
+    user_cfg = {"scoring": {"extra_skills": ["trino"]}}
+    project_cfg = {"scoring": {"extra_skills": ["flink"]}}
+
+    user_path = tmp_path / "user_config.json"
+    project_path = tmp_path / "project_config.json"
+    user_path.write_text(json.dumps(user_cfg), encoding="utf-8")
+    project_path.write_text(json.dumps(project_cfg), encoding="utf-8")
+
+    monkeypatch.setattr("job_discovery_engine.config.USER_CONFIG_PATH", user_path)
+    monkeypatch.setenv("DISCOVERY_CONFIG_PATH", str(project_path))
+
+    merged = _load_discovery_config()
+
+    # Project override wins over user config (both overwrite lists, not extend)
+    assert isinstance(merged["scoring"]["extra_skills"], list)
+    assert "flink" in merged["scoring"]["extra_skills"]
+
+
+def test_user_config_applied_when_no_project_override(tmp_path: Path, monkeypatch) -> None:
+    user_cfg = {"scoring": {"extra_skills": ["trino", "clickhouse"]}}
+    user_path = tmp_path / "user_config.json"
+    user_path.write_text(json.dumps(user_cfg), encoding="utf-8")
+
+    # Point DISCOVERY_CONFIG_PATH at a non-existent file so no project override loads
+    monkeypatch.setattr("job_discovery_engine.config.USER_CONFIG_PATH", user_path)
+    monkeypatch.setenv("DISCOVERY_CONFIG_PATH", str(tmp_path / "nonexistent.json"))
+
+    merged = _load_discovery_config()
+    assert "trino" in merged["scoring"]["extra_skills"]
+    assert "clickhouse" in merged["scoring"]["extra_skills"]
+
+
+def test_user_config_malformed_json_falls_back_to_defaults(tmp_path: Path, monkeypatch) -> None:
+    user_path = tmp_path / "bad_config.json"
+    user_path.write_text("{ not valid json", encoding="utf-8")
+
+    monkeypatch.setattr("job_discovery_engine.config.USER_CONFIG_PATH", user_path)
+    monkeypatch.setenv("DISCOVERY_CONFIG_PATH", str(tmp_path / "nonexistent.json"))
+
+    merged = _load_discovery_config()
+    # Falls back to default: DEFAULT_DISCOVERY_CONFIG (no crash)
+    assert "keyword_weights" in merged["scoring"]
+
+
+def test_user_config_missing_is_skipped_silently(tmp_path: Path, monkeypatch) -> None:
+    nonexistent = tmp_path / "no_user_config.json"
+    monkeypatch.setattr("job_discovery_engine.config.USER_CONFIG_PATH", nonexistent)
+    monkeypatch.setenv("DISCOVERY_CONFIG_PATH", str(tmp_path / "nonexistent.json"))
+
+    merged = _load_discovery_config()
+    assert "keyword_weights" in merged["scoring"]
+
+
+def test_deep_merge_prefers_override_values() -> None:
+    base = {"a": {"x": 1, "y": 2}, "b": [1, 2]}
+    override = {"a": {"y": 99, "z": 3}, "b": [9]}
+    result = _deep_merge(base, override)
+    assert result["a"]["x"] == 1
+    assert result["a"]["y"] == 99
+    assert result["a"]["z"] == 3
+    assert result["b"] == [9]
