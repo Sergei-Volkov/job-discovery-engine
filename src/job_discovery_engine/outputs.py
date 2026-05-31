@@ -254,7 +254,7 @@ def sync_application_api(
                     "utf-8"
                 )
             ).hexdigest(),
-            "change_note": json.dumps(
+            "score_breakdown": json.dumps(
                 {
                     "score": item.score,
                     "fit": item.fit,
@@ -264,6 +264,7 @@ def sync_application_api(
                 },
                 ensure_ascii=True,
             ),
+            "change_note": f"updated on {today}",
             "notes": item.fit_notes,
         }
         attempt = 0
