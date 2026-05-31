@@ -79,10 +79,12 @@ def run_discovery_pipeline(options: DiscoveryRunOptions) -> tuple[DiscoveryRunRe
     if not owned_skills:
         raise ValueError(f"No recognizable skills found in CV: {cv_path}")
 
+    _raw_cv_text = shared.read_cv_text(cv_path)
     context = DiscoveryContext(
         profile=options.profile,
         owned_skills=owned_skills,
         search_terms=shared.infer_search_terms_for_profile(owned_skills, options.profile),
+        cv_words=shared.cv_word_bag(_raw_cv_text),
     )
 
     effective_output_dir = options.output_dir.resolve() if options.output_dir else None

@@ -6,11 +6,30 @@ from pathlib import Path
 try:
     from . import config
     from .models import DiscoveryContext, JobMatch, OutcomePriors
-    from .text_utils import days_old, normalize, strip_latex
+    from .text_utils import days_old, normalize, read_cv_text, strip_latex
 except ImportError:  # pragma: no cover - script-mode fallback
     import config
     from models import DiscoveryContext, JobMatch, OutcomePriors
-    from text_utils import days_old, normalize, strip_latex
+    from text_utils import days_old, normalize, read_cv_text, strip_latex
+
+# Words common in both CVs and job descriptions that carry no domain signal.
+_CV_STOP_WORDS: frozenset[str] = frozenset(
+    [
+        "about", "above", "across", "after", "again", "against", "along",
+        "among", "apply", "around", "because", "before", "being", "below",
+        "between", "could", "doing", "during", "every", "first", "found",
+        "given", "great", "having", "large", "later", "might", "other",
+        "please", "their", "there", "these", "those", "three", "through",
+        "under", "until", "using", "various", "where", "which", "while",
+        "whose", "within", "without", "would",
+        # high-frequency CV/JD noise words
+        "ability", "apply", "based", "build", "candidate", "company",
+        "ensure", "environment", "excellent", "experience", "following",
+        "knowledge", "looking", "manage", "minimum", "opportunity",
+        "position", "preferred", "provide", "required", "responsible",
+        "skills", "strong", "support", "working", "years",
+    ]
+)
 
 
 def _runtime_context(context: DiscoveryContext | None) -> DiscoveryContext:
@@ -24,8 +43,7 @@ def _runtime_context(context: DiscoveryContext | None) -> DiscoveryContext:
 
 
 def extract_owned_skills_from_cv(cv_path: Path) -> set[str]:
-    raw_text = cv_path.read_text(encoding="utf-8", errors="ignore")
-    text = strip_latex(raw_text).lower()
+    text = read_cv_text(cv_path).lower()
     owned: set[str] = set()
 
     for skill, patterns in config.SKILL_PATTERNS.items():
@@ -43,6 +61,18 @@ def extract_owned_skills_from_cv(cv_path: Path) -> set[str]:
             owned.add(skill.strip().lower())
 
     return owned
+
+
+def cv_word_bag(cv_text: str) -> frozenset[str]:
+    """Return unique content words (alpha, len≥5, non-stopword) from CV text.
+
+    Used to compute a word-overlap similarity bonus in :func:`score_match`.
+    Domain-specific terms (e.g. "airflow", "spark", "fastapi") will appear
+    here and boost scores when they also appear in a job description.
+    """
+    return frozenset(
+        w for w in re.findall(r"[a-z]{5,}", cv_text.lower()) if w not in _CV_STOP_WORDS
+    )
 
 
 def infer_search_terms_for_profile(owned_skills: set[str], profile: str) -> list[str]:
@@ -185,6 +215,10 @@ def score_match(title: str, details: str, context: DiscoveryContext | None = Non
         score += 4
     if "remote" in text or "world" in text or "emea" in text or "europe" in text:
         score += 1
+    if runtime.cv_words:
+        job_words = frozenset(re.findall(r"[a-z]{5,}", text))
+        overlap = len(runtime.cv_words & job_words)
+        score += min(2, overlap // 5)
     return score
 
 

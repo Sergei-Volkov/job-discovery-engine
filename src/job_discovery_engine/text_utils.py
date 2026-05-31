@@ -4,6 +4,7 @@ import re
 import ssl
 from datetime import datetime
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
@@ -164,3 +165,28 @@ def split_company_and_title(raw_title: str, fallback_company: str = "Unknown") -
         return normalize(left), normalize(right)
 
     return normalize(fallback_company), raw_title
+
+
+def read_cv_text(cv_path: Path) -> str:
+    """Extract text from a CV file.
+
+    Supported formats:
+      - ``.pdf``  — extracted via ``pypdf`` (install ``job-discovery-engine[pdf]``).
+      - ``.tex``  — LaTeX markup stripped with :func:`strip_latex`.
+      - anything else — read as UTF-8 plain text.
+    """
+    suffix = cv_path.suffix.lower()
+    if suffix == ".pdf":
+        try:
+            import pypdf  # noqa: PLC0415
+        except ImportError as exc:
+            raise ImportError(
+                "pypdf is required for PDF CV parsing. "
+                "Install it with: pip install 'job-discovery-engine[pdf]'"
+            ) from exc
+        reader = pypdf.PdfReader(cv_path)
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+    raw = cv_path.read_text(encoding="utf-8", errors="ignore")
+    if suffix == ".tex":
+        return strip_latex(raw)
+    return raw

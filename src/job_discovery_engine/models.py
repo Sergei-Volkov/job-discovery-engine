@@ -1,5 +1,5 @@
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 from urllib.error import HTTPError, URLError
 
@@ -25,6 +25,7 @@ class DiscoveryContext:
     profile: str
     owned_skills: set[str]
     search_terms: list[str]
+    cv_words: frozenset[str] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)
