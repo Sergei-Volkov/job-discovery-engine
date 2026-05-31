@@ -85,8 +85,7 @@ def run_discovery_pipeline(options: DiscoveryRunOptions) -> tuple[DiscoveryRunRe
         search_terms=shared.infer_search_terms_for_profile(owned_skills, options.profile),
     )
 
-    if options.output_dir:
-        outputs.configure_output_dir(options.output_dir.resolve())
+    effective_output_dir = options.output_dir.resolve() if options.output_dir else None
 
     if not options.api_write_key:
         warnings.append("JOB_SEARCH_WRITE_API_KEY is not set; API upserts will likely fail with 401 Unauthorized.")
@@ -159,15 +158,17 @@ def run_discovery_pipeline(options: DiscoveryRunOptions) -> tuple[DiscoveryRunRe
         if item.score >= options.min_score and (options.include_stretch or item.fit != "Stretch")
     ][: options.limit]
 
-    csv_path, strict_md_path, broad_md_path = outputs.write_outputs(strict_matches, broad_matches, collection_report)
-    notes_path = outputs.write_application_notes(strict_matches)
+    csv_path, strict_md_path, broad_md_path = outputs.write_outputs(
+        strict_matches, broad_matches, collection_report, output_dir=effective_output_dir
+    )
+    notes_path = outputs.write_application_notes(strict_matches, output_dir=effective_output_dir)
     synced_count, failed_rows = outputs.sync_application_api(
         strict_matches,
         options.api_base_url,
         options.api_write_key,
         match_profile=context.profile,
     )
-    checklist_path = outputs.write_selected_jobs_checklist(strict_matches)
+    checklist_path = outputs.write_selected_jobs_checklist(strict_matches, output_dir=effective_output_dir)
 
     result = DiscoveryRunResult(
         context=context,

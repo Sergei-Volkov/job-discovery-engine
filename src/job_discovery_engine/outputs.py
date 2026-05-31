@@ -40,6 +40,8 @@ BROAD_MATCHES_PATH = OUTPUT_DIR / "job_matches_broad.md"
 
 
 def configure_output_dir(output_dir: Path | None) -> None:
+    """Deprecated: pass output_dir explicitly to write_outputs / write_application_notes /
+    write_selected_jobs_checklist instead of mutating module-level globals."""
     global OUTPUT_DIR, TRACKER_PATH, NOTES_PATH, CHECKLIST_PATH, BROAD_MATCHES_PATH
     if output_dir is None:
         return
@@ -89,13 +91,17 @@ def write_table(path: Path, title: str, matches: list[JobMatch], report: Collect
 
 
 def write_outputs(
-    strict_matches: list[JobMatch], broad_matches: list[JobMatch], report: CollectionReport | None = None
+    strict_matches: list[JobMatch],
+    broad_matches: list[JobMatch],
+    report: CollectionReport | None = None,
+    output_dir: Path | None = None,
 ) -> tuple[Path, Path, Path]:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    effective_dir = (output_dir or OUTPUT_DIR).resolve()
+    effective_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M")
-    csv_path = OUTPUT_DIR / f"job_matches_{stamp}.csv"
-    strict_md_path = OUTPUT_DIR / "job_matches_latest.md"
-    broad_md_path = BROAD_MATCHES_PATH
+    csv_path = effective_dir / f"job_matches_{stamp}.csv"
+    strict_md_path = effective_dir / "job_matches_latest.md"
+    broad_md_path = effective_dir / "job_matches_broad.md"
 
     with csv_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(
@@ -137,8 +143,9 @@ def write_outputs(
     return csv_path, strict_md_path, broad_md_path
 
 
-def write_application_notes(matches: list[JobMatch]) -> Path:
-    with NOTES_PATH.open("w", encoding="utf-8") as fh:
+def write_application_notes(matches: list[JobMatch], output_dir: Path | None = None) -> Path:
+    notes_path = (output_dir or OUTPUT_DIR).resolve() / "application_notes_latest.md"
+    with notes_path.open("w", encoding="utf-8") as fh:
         fh.write("# Application Notes\n\n")
         fh.write(f"Generated: {datetime.now().isoformat(timespec='minutes')}\n\n")
         for item in matches:
@@ -153,15 +160,16 @@ def write_application_notes(matches: list[JobMatch]) -> Path:
             for point in tailoring_points(item):
                 fh.write(f"  - {point}\n")
             fh.write(f"- Recommended next step: {next_step_for_fit(item.fit)}\n\n")
-    return NOTES_PATH
+    return notes_path
 
 
-def load_existing_checks() -> dict[tuple[str, str], bool]:
+def load_existing_checks(output_dir: Path | None = None) -> dict[tuple[str, str], bool]:
     checked: dict[tuple[str, str], bool] = {}
-    if not CHECKLIST_PATH.exists():
+    checklist_path = (output_dir or OUTPUT_DIR).resolve() / "selected_jobs.md"
+    if not checklist_path.exists():
         return checked
 
-    for line in CHECKLIST_PATH.read_text(encoding="utf-8").splitlines():
+    for line in checklist_path.read_text(encoding="utf-8").splitlines():
         match = re.match(r"- \[( |x|X)\] (.+?) — (.+)$", line.strip())
         if not match:
             continue
@@ -172,12 +180,13 @@ def load_existing_checks() -> dict[tuple[str, str], bool]:
     return checked
 
 
-def write_selected_jobs_checklist(matches: list[JobMatch]) -> Path:
-    existing_checks = load_existing_checks()
+def write_selected_jobs_checklist(matches: list[JobMatch], output_dir: Path | None = None) -> Path:
+    checklist_path = (output_dir or OUTPUT_DIR).resolve() / "selected_jobs.md"
+    existing_checks = load_existing_checks(output_dir)
     priority = [item for item in matches if item.fit == "Strong"]
     later = [item for item in matches if item.fit == "Medium"]
 
-    with CHECKLIST_PATH.open("w", encoding="utf-8") as fh:
+    with checklist_path.open("w", encoding="utf-8") as fh:
         fh.write("# Selected Jobs Checklist\n\n")
         fh.write("Check items to keep for later applying or active targeting.\n\n")
         fh.write(f"Updated: {datetime.now().isoformat(timespec='minutes')}\n\n")
@@ -200,7 +209,7 @@ def write_selected_jobs_checklist(matches: list[JobMatch]) -> Path:
             fh.write(f"  - Link: {item.url}\n")
             fh.write(f"  - Note: {item.fit_notes}\n")
 
-    return CHECKLIST_PATH
+    return checklist_path
 
 
 def sync_application_api(
