@@ -8,6 +8,11 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
+def _create_ssl_context() -> ssl.SSLContext:
+    """Return a default SSL context that enforces certificate validation."""
+    return ssl.create_default_context()
+
+
 def fetch_json(
     url: str,
     timeout: int = 25,
@@ -20,8 +25,7 @@ def fetch_json(
     if extra_headers:
         headers.update(extra_headers)
     request = Request(url, headers=headers)
-    context = ssl.create_default_context()
-    with urlopen(request, timeout=timeout, context=context) as response:
+    with urlopen(request, timeout=timeout, context=_create_ssl_context()) as response:
         return json.loads(response.read().decode("utf-8", errors="ignore"))
 
 
@@ -33,8 +37,7 @@ def fetch_text(url: str, timeout: int = 25) -> str:
             "Accept-Language": "en-US,en;q=0.9",
         },
     )
-    context = ssl.create_default_context()
-    with urlopen(request, timeout=timeout, context=context) as response:
+    with urlopen(request, timeout=timeout, context=_create_ssl_context()) as response:
         return response.read().decode("utf-8", errors="ignore")
 
 
@@ -57,8 +60,7 @@ def post_json(
         headers=headers,
         method="POST",
     )
-    context = ssl.create_default_context()
-    with urlopen(request, timeout=timeout, context=context) as response:
+    with urlopen(request, timeout=timeout, context=_create_ssl_context()) as response:
         return json.loads(response.read().decode("utf-8", errors="ignore"))
 
 
