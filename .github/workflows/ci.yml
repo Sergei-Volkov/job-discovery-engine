@@ -24,7 +24,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install package
-        run: pip install -e ".[test]"
+        run: pip install -e ".[test]" pip-audit
 
       - name: Audit dependencies
         run: pip-audit --skip-editable
